@@ -7,12 +7,44 @@ use mastermind::Game;
 
 use bevy_prototype_lyon::{entity::ShapeBundle, prelude::*};
 
+struct MastermindColors {
+    clear_color: Color,
+    case_colors: (Color, Color),
+    pieces_colors: [(Color, Color, Color); 6],
+    pieces_case_colors: (Color, Color),
+    result_bad_colors: (Color, Color),
+    result_good_colors: (Color, Color),
+    result_case_colors: (Color, Color),
+    secret_case_hidden_colors: (Color, Color),
+}
+
+impl FromWorld for MastermindColors {
+    fn from_world(_world: &mut World) -> Self {
+        MastermindColors {
+            clear_color: Color::BLACK,
+            case_colors: (Color::WHITE, Color::WHITE),
+            pieces_case_colors:(Color::BLACK, Color::BLACK),
+            pieces_colors: [
+                (Color::hex("36342F").unwrap(), Color::hex("878377").unwrap() , Color::BLACK),//BLACK
+                (Color::hex("F5F5E9").unwrap(), Color::hex("75756F").unwrap() , Color::BLACK),//WHITE
+                (Color::hex("F5E12C").unwrap(), Color::hex("B8A921").unwrap() , Color::WHITE),//YELLOW
+                (Color::hex("2129DB").unwrap(), Color::hex("252FF5").unwrap() , Color::WHITE),//BLUE
+                (Color::hex("F51000").unwrap(), Color::hex("750800").unwrap() , Color::WHITE),//RED
+                (Color::hex("51F516").unwrap(), Color::hex("3CB510").unwrap() , Color::WHITE),//GREEN
+            ],
+            result_bad_colors: (Color::BLACK, Color::GRAY),
+            result_good_colors: (Color::WHITE, Color::BLACK),
+            result_case_colors: (Color::GRAY, Color::BLACK ),
+            secret_case_hidden_colors: (Color::BLACK, Color::WHITE),
+        }
+    }
+}
+
 /// This example illustrates how to create a button that changes color and text based on its
 /// interaction state.
 fn main() {
     App::build()
         .insert_resource(Msaa { samples: 8 })
-        .insert_resource(ClearColor(Color::WHITE))
         .insert_resource(WindowDescriptor {
             title: "MasterMind".to_string(),
             width: 450.,
@@ -22,6 +54,7 @@ fn main() {
             mode: WindowMode::Windowed,
             ..Default::default()
         })
+        .init_resource::<MastermindColors>()
         .init_resource::<Mastermind>()
         .init_resource::<State>()
         .add_plugins(DefaultPlugins)
@@ -38,9 +71,10 @@ fn main() {
         .run();
 }
 
-fn setup(mut commands: Commands) {
+fn setup(mut commands: Commands, colors: Res<MastermindColors>) {
     let mut camera = OrthographicCameraBundle::new_2d();
     camera.transform = Transform::from_xyz(200., 275., 0.);
+    commands.insert_resource(ClearColor(colors.clear_color));
     commands.spawn_bundle(camera);
     commands
         .spawn()
@@ -53,16 +87,19 @@ fn setup(mut commands: Commands) {
         });
 }
 
-fn setup_gameboard(mut commands: Commands) {
+fn setup_gameboard(mut commands: Commands, colors: Res<MastermindColors>) {
     let initial_position = Vec3::new(100., 50., 0.);
     for row in 0..10 {
         for col in 0..4 {
             let local_translation =
                 Vec3::new((col as f32) * 50.0, (row as f32) * 50.0, 0.) + initial_position;
-            commands.spawn_bundle(MasterMindShapeBundler::build_case(Transform {
-                translation: local_translation,
-                ..Transform::default()
-            }));
+            commands.spawn_bundle(MasterMindShapeBundler::build_case(
+                Transform {
+                    translation: local_translation,
+                    ..Transform::default()
+                },
+                colors.case_colors,
+            ));
             commands
                 .spawn()
                 .insert(Position { row: row, col: col })
@@ -72,31 +109,40 @@ fn setup_gameboard(mut commands: Commands) {
                     shape: SelectableShape::Circle(25.),
                 });
         }
-        commands.spawn_bundle(MasterMindShapeBundler::build_result_case(Transform {
-            translation: Vec3::new(200., (row as f32) * 50.0, 0.) + initial_position,
-            ..Transform::default()
-        }));
+        commands.spawn_bundle(MasterMindShapeBundler::build_result_case(
+            Transform {
+                translation: Vec3::new(200., (row as f32) * 50.0, 0.) + initial_position,
+                ..Transform::default()
+            },
+            colors.result_case_colors,
+        ));
     }
     for col in 0..4 {
-        commands.spawn_bundle(MasterMindShapeBundler::build_secret_case(Transform {
-            translation: Vec3::new((col as f32) * 50.0, 500., 0.) + initial_position,
-            ..Transform::default()
-        }));
+        commands.spawn_bundle(MasterMindShapeBundler::build_secret_case(
+            Transform {
+                translation: Vec3::new((col as f32) * 50.0, 500., 0.) + initial_position,
+                ..Transform::default()
+            },
+            colors.secret_case_hidden_colors,
+        ));
     }
 }
 
-fn setup_pieces_color(mut commands: Commands, state: Res<State>) {
+fn setup_pieces_color(mut commands: Commands, colors: Res<MastermindColors>) {
     let initial_position = Vec3::new(75., 0., 0.);
     for col in 0..6 {
         let transform = Transform {
             translation: Vec3::new((col as f32) * 50.0, 0., 0.) + initial_position,
             ..Transform::default()
         };
-        commands.spawn_bundle(MasterMindShapeBundler::build_case(transform.clone()));
+        commands.spawn_bundle(MasterMindShapeBundler::build_case(
+            transform.clone(),
+            colors.pieces_case_colors,
+        ));
         commands
             .spawn_bundle(MasterMindShapeBundler::build_piece(
                 transform,
-                state.colors[col as usize],
+                colors.pieces_colors[col as usize],
             ))
             .insert(Selectable {
                 index: 1,
@@ -112,7 +158,7 @@ fn setup_pieces_color(mut commands: Commands, state: Res<State>) {
 struct MasterMindShapeBundler;
 
 impl MasterMindShapeBundler {
-    fn build_case(transform: Transform) -> ShapeBundle {
+    fn build_case(transform: Transform, colors: (Color, Color)) -> ShapeBundle {
         let shape = shapes::Rectangle {
             width: 50.,
             height: 50.,
@@ -120,7 +166,7 @@ impl MasterMindShapeBundler {
         };
         GeometryBuilder::build_as(
             &shape,
-            ShapeColors::outlined(Color::MAROON, Color::BLACK),
+            ShapeColors::outlined(colors.0, colors.1),
             DrawMode::Outlined {
                 fill_options: FillOptions::default(),
                 outline_options: StrokeOptions::default().with_line_width(1.0),
@@ -128,7 +174,7 @@ impl MasterMindShapeBundler {
             transform,
         )
     }
-    fn build_result_case(transform: Transform) -> ShapeBundle {
+    fn build_result_case(transform: Transform, colors: (Color, Color)) -> ShapeBundle {
         let shape = shapes::Rectangle {
             width: 50.,
             height: 50.,
@@ -136,7 +182,7 @@ impl MasterMindShapeBundler {
         };
         GeometryBuilder::build_as(
             &shape,
-            ShapeColors::outlined(Color::BLACK, Color::BLACK),
+            ShapeColors::outlined(colors.0, colors.1),
             DrawMode::Outlined {
                 fill_options: FillOptions::default(),
                 outline_options: StrokeOptions::default().with_line_width(1.0),
@@ -145,7 +191,7 @@ impl MasterMindShapeBundler {
         )
     }
 
-    fn build_secret_case(transform: Transform) -> ShapeBundle {
+    fn build_secret_case(transform: Transform, colors: (Color, Color)) -> ShapeBundle {
         let shape = shapes::Rectangle {
             width: 50.,
             height: 50.,
@@ -153,7 +199,7 @@ impl MasterMindShapeBundler {
         };
         GeometryBuilder::build_as(
             &shape,
-            ShapeColors::outlined(Color::BLACK, Color::YELLOW),
+            ShapeColors::outlined(colors.0, colors.1),
             DrawMode::Outlined {
                 fill_options: FillOptions::default(),
                 outline_options: StrokeOptions::default().with_line_width(1.0),
@@ -161,14 +207,14 @@ impl MasterMindShapeBundler {
             transform,
         )
     }
-    fn build_piece(transform: Transform, color: Color) -> ShapeBundle {
+    fn build_piece(transform: Transform, colors: (Color, Color, Color)) -> ShapeBundle {
         let shape = shapes::Circle {
             radius: 20.,
             ..shapes::Circle::default()
         };
         GeometryBuilder::build_as(
             &shape,
-            ShapeColors::outlined(color, Color::BLACK),
+            ShapeColors::outlined(colors.0, colors.1),
             DrawMode::Outlined {
                 fill_options: FillOptions::default(),
                 outline_options: StrokeOptions::default().with_line_width(5.0),
@@ -176,17 +222,17 @@ impl MasterMindShapeBundler {
             transform,
         )
     }
-    fn build_result(transform: Transform, color: Color) -> ShapeBundle {
+    fn build_result(transform: Transform, colors: (Color, Color)) -> ShapeBundle {
         let shape = shapes::Circle {
-            radius: 10.,
+            radius: 8.,
             ..shapes::Circle::default()
         };
         GeometryBuilder::build_as(
             &shape,
-            ShapeColors::outlined(color, Color::BLACK),
+            ShapeColors::outlined(colors.0, colors.1),
             DrawMode::Outlined {
                 fill_options: FillOptions::default(),
-                outline_options: StrokeOptions::default().with_line_width(0.0),
+                outline_options: StrokeOptions::default().with_line_width(4.0),
             },
             transform,
         )
@@ -197,17 +243,15 @@ struct Mastermind {
     state: Game,
 }
 
-struct State {
-    row: usize,
-    code: [Option<mastermind::Color>; 4],
-    colors: [Color; 6],
-}
-
 impl FromWorld for Mastermind {
     fn from_world(_world: &mut World) -> Self {
         let game = Game::new();
         Mastermind { state: game }
     }
+}
+struct State {
+    row: usize,
+    code: [Option<mastermind::Color>; 4],
 }
 
 impl FromWorld for State {
@@ -215,14 +259,6 @@ impl FromWorld for State {
         State {
             row: 0,
             code: [Option::None; 4],
-            colors: [
-                Color::BLACK,
-                Color::WHITE,
-                Color::YELLOW,
-                Color::BLUE,
-                Color::RED,
-                Color::GREEN,
-            ],
         }
     }
 }
@@ -326,6 +362,7 @@ fn select(
 fn play_code(
     mut cmd: Commands,
     mut game: ResMut<State>,
+    colors: Res<MastermindColors>,
     squery: Query<(&Select, &mut Selector)>,
     query: Query<(Entity, &Selectable, &Position)>,
 ) {
@@ -353,7 +390,7 @@ fn play_code(
                                     translation: local_translation,
                                     ..Transform::default()
                                 },
-                                game.colors[select.piece.color.value()],
+                                colors.pieces_colors[select.piece.color.value()],
                             ));
                     }
                     selector.selected = false;
@@ -386,7 +423,12 @@ fn some_code_to_code(tab: &[Option<mastermind::Color>; 4]) -> mastermind::Code {
     code as mastermind::Code
 }
 
-fn game_update(mut cmd: Commands, mut mastermind: ResMut<Mastermind>, mut state: ResMut<State>) {
+fn game_update(
+    mut cmd: Commands,
+    mut mastermind: ResMut<Mastermind>,
+    mut state: ResMut<State>,
+    colors: Res<MastermindColors>,
+) {
     if is_all_some(&state.code) {
         match mastermind.state.play(some_code_to_code(&state.code)) {
             mastermind::State::Playable(playable) => {
@@ -405,7 +447,7 @@ fn game_update(mut cmd: Commands, mut mastermind: ResMut<Mastermind>, mut state:
                                         translation: tmp,
                                         ..Transform::default()
                                     },
-                                    Color::GREEN,
+                                    colors.result_good_colors,
                                 ));
                             i += 1;
                         }
@@ -418,7 +460,7 @@ fn game_update(mut cmd: Commands, mut mastermind: ResMut<Mastermind>, mut state:
                                         translation: tmp,
                                         ..Transform::default()
                                     },
-                                    Color::YELLOW,
+                                    colors.result_bad_colors,
                                 ));
                             i += 1;
                         }
@@ -439,7 +481,7 @@ fn game_update(mut cmd: Commands, mut mastermind: ResMut<Mastermind>, mut state:
                                 translation: local_translation,
                                 ..Transform::default()
                             },
-                            state.colors[finish.code[col].value()],
+                            colors.pieces_colors[finish.code[col].value()],
                         ));
                 }
             }
