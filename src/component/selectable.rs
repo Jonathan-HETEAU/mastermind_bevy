@@ -12,9 +12,12 @@ pub struct Selectable {
 }
 
 impl Selectable {
-
-    pub fn new(index:i32,position:Vec2 , shape:SelectableShape)-> Self {
-        Selectable { shape, position, index}
+    pub fn new(index: i32, position: Vec2, shape: SelectableShape) -> Self {
+        Selectable {
+            shape,
+            position,
+            index,
+        }
     }
 
     pub fn is_selected(&self, position: &Vec2) -> bool {

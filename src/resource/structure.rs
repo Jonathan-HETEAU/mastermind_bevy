@@ -1,7 +1,7 @@
 use bevy::{
     math::Vec3,
     prelude::{FromWorld, World},
-    window::{WindowDescriptor},
+    window::WindowDescriptor,
 };
 
 pub struct Structure {

@@ -5,13 +5,17 @@ pub struct Mastermind {
     pub state: Game,
 }
 
-impl FromWorld for Mastermind {
-    fn from_world(_world: &mut World) -> Self {
-        let game = Game::new();
-        Mastermind { state: game }
+impl Mastermind {
+    pub fn new() -> Self {
+        Mastermind { state: Game::new() }
     }
 }
 
+impl FromWorld for Mastermind {
+    fn from_world(_world: &mut World) -> Self {
+        Mastermind { state: Game::new() }
+    }
+}
 
 pub fn is_all_some(tab: &[Option<mastermind::Color>; 4]) -> bool {
     let mut bool = true;
