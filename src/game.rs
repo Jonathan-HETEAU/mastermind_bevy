@@ -10,6 +10,7 @@ use crate::resource::color::MastermindColors;
 use crate::resource::mastermind::{is_all_some, some_code_to_code};
 use crate::resource::snapshots::Snapshots;
 use crate::resource::state::State as MState;
+use crate::resource::assets::Assets as MAssets;
 use crate::resource::structure::Structure;
 use crate::{resource::mastermind::Mastermind, state::AppState};
 use bevy::input::mouse::MouseButtonInput;
@@ -34,6 +35,7 @@ impl Plugin for GamePlugin {
                 .with_system(selector_from_mouse.system().label("Selector"))
                 .with_system(select.system().label("Piece").after("Selector"))
                 .with_system(play_code.system().label("Code").after("Piece"))
+                .with_system(button_system.system())
                 .with_system(clean_selector.system().after("Code"))
                 .with_system(game_update.system()),
         )
@@ -46,7 +48,6 @@ pub fn setup(
     mut app_state: ResMut<State<AppState>>,
     mut snapshots: ResMut<Snapshots>,
 ) {
-    info!("game::setup");
     commands.insert_resource(Mastermind::new());
     commands.insert_resource(MState::new());
     snapshots.snap(&String::from("Game"), Vec::new());
@@ -57,6 +58,7 @@ pub fn draw_ui(
     mut cmds: Commands,
     mut snapshots: ResMut<Snapshots>,
     button_materials: Res<ButtonMaterials>,
+    assets: Res<MAssets>,
 ) {
     let entities = snapshots.get_mut_snap(&String::from("Game")).unwrap();
     entities.push(cmds.spawn_bundle(UiCameraBundle::default()).id());
@@ -75,7 +77,24 @@ pub fn draw_ui(
                 },
                 material: button_materials.alerte.clone(),
                 ..Default::default()
+            }).with_children(|parent| {
+                parent.spawn().insert_bundle(TextBundle {
+                    text: Text::with_section(
+                        "  ...  ",
+                        TextStyle {
+                            font: assets.font.clone(),
+                            font_size: 40.0,
+                            color: Color::rgb(0.9, 0.9, 0.9),
+                        },
+                        TextAlignment{
+                            horizontal: HorizontalAlign::Center,
+                            vertical: VerticalAlign::Center,
+                        },
+                    ),
+                    ..Default::default()
+                });
             })
+            .insert(ActionButton::new(|state| state.pop().unwrap()))
             .id(),
     );
 }
@@ -206,7 +225,6 @@ pub fn draw_pieces(
 }
 
 fn clear(mut cmds: Commands, mut snapshots: ResMut<Snapshots>) {
-    info!("game::clear");
     if let Some(entities) = snapshots.get_mut_snap(&String::from("Game")) {
         for entity in entities.iter() {
             cmds.entity(*entity).despawn_recursive();
@@ -407,7 +425,50 @@ fn game_update(
                             .id(),
                     );
                 }
-                app_state.pop().unwrap();
+                
+            }
+        }
+    }
+}
+
+struct ActionButton {
+    pub clicked: fn(&mut ResMut<State<AppState>>),
+}
+
+impl ActionButton {
+    fn new(clicked: fn(&mut ResMut<State<AppState>>)) -> Self {
+        Self { clicked }
+    }
+}
+
+fn button_system(
+    button_materials: Res<ButtonMaterials>,
+    mut interaction_query: Query<
+        (
+            &Interaction,
+            &mut Handle<ColorMaterial>,
+            &ActionButton,
+            &Children,
+        ),
+        (Changed<Interaction>, With<Button>),
+    >,
+    mut app_state: ResMut<State<AppState>>,
+    
+    mut text_query: Query<&mut Text>,
+) {
+    for (interaction, mut material, action, children) in interaction_query.iter_mut() {
+        let mut text = text_query.get_mut(children[0]).unwrap();
+        match *interaction {
+            Interaction::Clicked => {
+                (action.clicked)(&mut app_state);
+            }
+            Interaction::Hovered => {
+                text.sections[0].value = "MENU".to_string();
+                *material = button_materials.hovered.clone();
+            }
+            Interaction::None => {
+                text.sections[0].value = "  ...  ".to_string();
+                *material = button_materials.normal.clone();
             }
         }
     }

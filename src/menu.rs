@@ -2,8 +2,8 @@ use crate::mastermind_shape_bundler as MSB;
 use crate::{
     loading::AssetsLoading,
     resource::{
-        button::ButtonMaterials, color::MastermindColors, snapshots::Snapshots,
-        structure::Structure,
+        assets::Assets as MyAssets, button::ButtonMaterials, color::MastermindColors,
+        snapshots::Snapshots, structure::Structure,
     },
     state::AppState,
 };
@@ -35,20 +35,15 @@ impl Plugin for MenuPlugin {
     }
 }
 
-struct AssetsMenu {
-    font: Handle<Font>,
-}
-
 fn setup(
     mut commands: Commands,
     asset_server: Res<AssetServer>,
     mut app_state: ResMut<State<AppState>>,
     mut snapshots: ResMut<Snapshots>,
 ) {
-    info!("menu::setup");
     snapshots.snap(&String::from("Menu"), Vec::new());
-    let assets_menu = AssetsMenu {
-        font: asset_server.load("fonts/FiraSans-Bold.ttf"),
+    let assets_menu = MyAssets {
+        font: asset_server.load("fonts/Gilbert Bold-Preview_1004.otf"),
     };
     let mut loader = AssetsLoading::new();
     loader.add(assets_menu.font.clone_untyped());
@@ -85,7 +80,6 @@ fn button_system(
 }
 
 fn clear(mut cmds: Commands, mut snapshots: ResMut<Snapshots>) {
-    info!("menu::clean");
     if let Some(entities) = snapshots.get_mut_snap(&String::from("Menu")) {
         for entity in entities.iter() {
             cmds.entity(*entity).despawn_recursive();
@@ -98,9 +92,8 @@ fn resume(
     mut cmds: Commands,
     mut snapshots: ResMut<Snapshots>,
     button_materials: Res<ButtonMaterials>,
-    assets: Res<AssetsMenu>,
+    assets: Res<MyAssets>,
 ) {
-    info!("menu::resume");
     let entities = snapshots.get_mut_snap(&String::from("Menu")).unwrap();
     entities.push(cmds.spawn_bundle(UiCameraBundle::default()).id());
     entities.push(
@@ -134,6 +127,43 @@ fn resume(
                 });
             })
             .id(),
+    );
+    entities.push(
+        cmds.spawn_bundle(TextBundle {
+            text: Text {
+                sections: vec![
+                    TextSection {
+                        value: "by ".to_string(),
+                        style: TextStyle {
+                            font: assets.font.clone(),
+                            font_size: 11.0,
+                            color: Color::GOLD,
+                        },
+                    },
+                    TextSection {
+                        value: "Jonathan HETEAU".to_string(),
+                        style: TextStyle {
+                            font: assets.font.clone(),
+                            font_size: 18.0,
+                            color: Color::WHITE ,
+                        },
+                    },
+                ],
+                ..Default::default()
+            },
+            style: Style {
+                position_type: PositionType::Absolute,
+                position: Rect {
+                    left: Val::Auto,
+                    right: Val::Auto,
+                    top: Val::Auto,
+                    bottom: Val::Px(0.),
+                },
+                ..Default::default()
+            },
+            ..Default::default()
+        })
+        .id(),
     );
 }
 

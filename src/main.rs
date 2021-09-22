@@ -1,7 +1,6 @@
 use bevy::input::ElementState;
 use bevy::prelude::*;
 use bevy::window::WindowMode;
-use bevy_mod_debug_console::ConsoleDebugPlugin;
 use bevy_prototype_lyon::plugin::ShapePlugin;
 use loading::LoadingPlugin;
 use menu::MenuPlugin;
@@ -37,7 +36,6 @@ fn main() {
         })
         .init_resource::<Snapshots>()
         .add_plugins(DefaultPlugins)
-        .add_plugin(ConsoleDebugPlugin)
         .add_plugin(ShapePlugin)
         .init_resource::<Structure>()
         .init_resource::<MastermindColors>()
