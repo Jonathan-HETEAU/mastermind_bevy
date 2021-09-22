@@ -1,10 +1,14 @@
-use bevy::prelude::*;
-
+use crate::mastermind_shape_bundler as MSB;
 use crate::{
     loading::AssetsLoading,
-    resource::{button::ButtonMaterials, snapshots::Snapshots},
+    resource::{
+        button::ButtonMaterials, color::MastermindColors, snapshots::Snapshots,
+        structure::Structure,
+    },
     state::AppState,
 };
+use bevy::core::FixedTimestep;
+use bevy::prelude::*;
 pub struct MenuPlugin;
 
 impl Plugin for MenuPlugin {
@@ -15,9 +19,18 @@ impl Plugin for MenuPlugin {
             )
             .add_system_set(SystemSet::on_pause(AppState::Menu).with_system(clear.system()))
             .add_system_set(SystemSet::on_exit(AppState::Menu).with_system(clear.system()))
-            .add_system_set(SystemSet::on_resume(AppState::Menu).with_system(resume.system()))
+            .add_system_set(
+                SystemSet::on_resume(AppState::Menu)
+                    .with_system(resume.system())
+                    .with_system(draw_background.system()),
+            )
             .add_system_set(
                 SystemSet::on_update(AppState::Menu).with_system(button_system.system()),
+            )
+            .add_system_set(
+                SystemSet::on_update(AppState::Menu)
+                    .with_system(animation.system())
+                    .with_run_criteria(FixedTimestep::steps_per_second(25.)),
             );
     }
 }
@@ -30,8 +43,10 @@ fn setup(
     mut commands: Commands,
     asset_server: Res<AssetServer>,
     mut app_state: ResMut<State<AppState>>,
+    mut snapshots: ResMut<Snapshots>,
 ) {
     info!("menu::setup");
+    snapshots.snap(&String::from("Menu"), Vec::new());
     let assets_menu = AssetsMenu {
         font: asset_server.load("fonts/FiraSans-Bold.ttf"),
     };
@@ -86,7 +101,7 @@ fn resume(
     assets: Res<AssetsMenu>,
 ) {
     info!("menu::resume");
-    let mut entities: Vec<Entity> = Vec::new();
+    let entities = snapshots.get_mut_snap(&String::from("Menu")).unwrap();
     entities.push(cmds.spawn_bundle(UiCameraBundle::default()).id());
     entities.push(
         cmds.spawn()
@@ -120,5 +135,48 @@ fn resume(
             })
             .id(),
     );
-    snapshots.snap(&String::from("Menu"), entities);
+}
+
+fn draw_background(
+    mut cmds: Commands,
+    mut snapshots: ResMut<Snapshots>,
+    colors: Res<MastermindColors>,
+    structure: Res<Structure>,
+) {
+    let entities = snapshots.get_mut_snap(&String::from("Menu")).unwrap();
+    for row in 0..14 {
+        for col in 0..6 {
+            if fastrand::u8(..5) >= 2 {
+                let local_translation = Vec3::new(
+                    (col as f32) * structure.piece_size,
+                    (row as f32) * structure.piece_size,
+                    0.,
+                ) + structure.animation_start;
+                entities.push(
+                    cmds.spawn_bundle(MSB::build_piece(
+                        Transform {
+                            translation: local_translation,
+                            ..Transform::default()
+                        },
+                        colors.pieces_colors[fastrand::usize(..colors.pieces_colors.len())],
+                        structure.piece_size,
+                    ))
+                    .insert(Animated)
+                    .id(),
+                );
+            }
+        }
+    }
+}
+
+struct Animated;
+
+fn animation(query: Query<(&mut Transform, &Animated)>, structure: Res<Structure>) {
+    query.for_each_mut(|(mut transform, _)| {
+        transform.translation.y += 1.;
+        if transform.translation.y > structure.animation_end.y {
+            transform.translation.y =
+                structure.animation_start.y + (transform.translation.y - structure.animation_end.y);
+        }
+    });
 }

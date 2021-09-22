@@ -9,6 +9,8 @@ pub struct Structure {
     pub pieces_position: Vec3,
     pub boardgame_position: Vec3,
     pub secrets_position: Vec3,
+    pub animation_start: Vec3,
+    pub animation_end: Vec3,
 }
 
 impl FromWorld for Structure {
@@ -26,6 +28,8 @@ impl FromWorld for Structure {
             pieces_position: initial_positon,
             boardgame_position: initial_positon + Vec3::new(piece_size / 2., piece_size, 0.),
             secrets_position: initial_positon + Vec3::new(piece_size / 2., piece_size * 10., 0.),
+            animation_start: initial_positon + Vec3::new(0., -piece_size, 0.),
+            animation_end: initial_positon + Vec3::new(0., piece_size * 12., 0.),
         }
     }
 }

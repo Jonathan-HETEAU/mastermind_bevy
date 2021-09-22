@@ -1,6 +1,7 @@
 use bevy::input::ElementState;
 use bevy::prelude::*;
 use bevy::window::WindowMode;
+use bevy_mod_debug_console::ConsoleDebugPlugin;
 use bevy_prototype_lyon::plugin::ShapePlugin;
 use loading::LoadingPlugin;
 use menu::MenuPlugin;
@@ -36,11 +37,12 @@ fn main() {
         })
         .init_resource::<Snapshots>()
         .add_plugins(DefaultPlugins)
+        .add_plugin(ConsoleDebugPlugin)
         .add_plugin(ShapePlugin)
         .init_resource::<Structure>()
         .init_resource::<MastermindColors>()
         .add_state(AppState::Menu)
-        .add_system(setup.system())
+        .add_startup_system(setup.system())
         .add_system_set(SystemSet::on_enter(AppState::Restart).with_system(restart.system()))
         .add_plugin(LoadingPlugin)
         .add_plugin(MenuPlugin)
