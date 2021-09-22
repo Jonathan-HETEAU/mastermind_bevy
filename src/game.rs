@@ -333,7 +333,6 @@ fn game_update(
     mut state: ResMut<MState>,
     structure: Res<Structure>,
     colors: Res<MastermindColors>,
-    mut app_state: ResMut<State<AppState>>,
     query: Query<(Entity, &Selectable)>,
     mut snapshots: ResMut<Snapshots>,
 ) {
