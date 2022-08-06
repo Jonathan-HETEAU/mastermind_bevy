@@ -132,7 +132,6 @@ pub fn draw_background(
                     .spawn()
                     .insert(Position { row: row, col: col })
                     .insert(Selectable::new(
-                        1,
                         Vec2::new(
                             local_translation.x + (structure.piece_size / 2.),
                             local_translation.y + (structure.piece_size / 2.),
@@ -209,7 +208,6 @@ pub fn draw_pieces(
                     structure.piece_size,
                 ))
                 .insert(Selectable::new(
-                    1,
                     Vec2::new(
                         transform.translation.x + (structure.piece_size / 2.),
                         transform.translation.y + (structure.piece_size / 2.),

@@ -4,19 +4,17 @@ use bevy::math::Vec2;
 pub enum SelectableShape {
     Circle(f32),
 }
-#[derive(Debug)]
+
 pub struct Selectable {
     shape: SelectableShape,
     position: Vec2,
-    index: i32,
 }
 
 impl Selectable {
-    pub fn new(index: i32, position: Vec2, shape: SelectableShape) -> Self {
+    pub fn new(position: Vec2, shape: SelectableShape) -> Self {
         Selectable {
             shape,
             position,
-            index,
         }
     }
 
